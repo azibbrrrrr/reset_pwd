@@ -102,7 +102,7 @@
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" required>
             </div>
-            <button type="button" class="login-btn">Login</button>
+            <button type="submit" class="login-btn">Login</button>
         </form>
         
         <div class="links">
@@ -116,24 +116,82 @@
 
     <script src="config.js"></script>
     <script>
-        // API endpoint for forget password
+        // API endpoints
         const FORGET_PASSWORD_ENDPOINT = `${CONFIG.BASE_URL}/api/method/mindhive_erpnext_apis.mindhive_erpnext_apis.core.endpoints.v1.auth.forget_password`;
+        const LOGIN_ENDPOINT = `${CONFIG.BASE_URL}/api/method/mindhive_erpnext_apis.mindhive_erpnext_apis.core.endpoints.v1.auth.login`;
         
         // Get DOM elements
         const firstTimeLink = document.getElementById('firstTimeLink');
         const resetPasswordLink = document.getElementById('resetPasswordLink');
         const statusDiv = document.getElementById('status');
+        const loginForm = document.getElementById('loginForm');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.querySelector('.login-btn');
         
         // Show status message
         function showStatus(message, isSuccess = false) {
             statusDiv.textContent = message;
             statusDiv.className = `status ${isSuccess ? 'success' : 'error'}`;
             statusDiv.style.display = 'block';
+        }
+        
+        // Handle login
+        async function handleLogin(e) {
+            e.preventDefault();
             
-            // Hide after 5 seconds
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 5000);
+            const email = emailInput.value.trim();
+            const password = passwordInput.value.trim();
+            
+            if (!email || !password) {
+                showStatus('Please enter both email and password.', false);
+                return;
+            }
+            
+            try {
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'Logging in...';
+                showStatus('Logging in...', true);
+                
+                const response = await fetch(LOGIN_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        usr: email,
+                        pwd: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.message && data.message.success) {
+                    // Store authentication data
+                    localStorage.setItem('access_token', data.message.access_token);
+                    localStorage.setItem('refresh_token', data.message.refresh_token);
+                    localStorage.setItem('user', data.message.user);
+                    localStorage.setItem('full_name', data.message.full_name);
+                    localStorage.setItem('workspace', JSON.stringify(data.message.workspace));
+                    localStorage.setItem('expires_in', data.message.expires_in);
+                    localStorage.setItem('token_type', data.message.token_type);
+                    
+                    showStatus(`Welcome ${data.message.full_name}! Login successful.`, true);
+                } else {
+                    // Handle error response
+                    const errorMessage = data.message && data.message.message 
+                        ? data.message.message 
+                        : 'Login failed. Please check your credentials.';
+                    showStatus(errorMessage, false);
+                }
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                showStatus('Network error. Please check your connection and try again.', false);
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+            }
         }
         
         // Handle forget password request
@@ -195,10 +253,11 @@
             handleForgetPassword(false);
         });
         
-        // Prevent form submission (login button is display only)
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-        });
+        // Handle login form submission
+        loginForm.addEventListener('submit', handleLogin);
+        
+        // Handle login button click
+        loginBtn.addEventListener('click', handleLogin);
     </script>
 </body>
 </html> 
