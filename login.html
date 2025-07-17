@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - MindHive</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .login-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .login-btn:hover {
+            background-color: #0056b3;
+        }
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .link {
+            color: #007bff;
+            text-decoration: none;
+            cursor: pointer;
+            margin: 0 10px;
+            font-size: 14px;
+        }
+        .link:hover {
+            text-decoration: underline;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .separator {
+            margin: 0 10px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>Login</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="button" class="login-btn">Login</button>
+        </form>
+        
+        <div class="links">
+            <a href="#" class="link" id="firstTimeLink">First time login?</a>
+            <span class="separator">|</span>
+            <a href="#" class="link" id="resetPasswordLink">Reset password</a>
+        </div>
+        
+        <div id="status" class="status"></div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        // API endpoint for forget password
+        const FORGET_PASSWORD_ENDPOINT = `${CONFIG.BASE_URL}/api/method/mindhive_erpnext_apis.mindhive_erpnext_apis.core.endpoints.v1.auth.forget_password`;
+        
+        // Get DOM elements
+        const firstTimeLink = document.getElementById('firstTimeLink');
+        const resetPasswordLink = document.getElementById('resetPasswordLink');
+        const statusDiv = document.getElementById('status');
+        
+        // Show status message
+        function showStatus(message, isSuccess = false) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${isSuccess ? 'success' : 'error'}`;
+            statusDiv.style.display = 'block';
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Handle forget password request
+        async function handleForgetPassword(isFirstTime) {
+            const email = prompt('Please enter your email address:');
+            
+            if (!email) {
+                return; // User cancelled
+            }
+            
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert('Please enter a valid email address.');
+                return;
+            }
+            
+            try {
+                showStatus('Sending request...', true);
+                
+                const response = await fetch(FORGET_PASSWORD_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        link: `${window.location.origin}/reset-password.html`,
+                        first_time: isFirstTime
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus('Password reset email sent successfully! Please check your inbox.', true);
+                } else {
+                    // Handle error response
+                    const errorMessage = data.message && data.message.message 
+                        ? data.message.message 
+                        : 'An error occurred. Please try again.';
+                    showStatus(errorMessage, false);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Network error. Please check your connection and try again.', false);
+            }
+        }
+        
+        // Event listeners
+        firstTimeLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleForgetPassword(true);
+        });
+        
+        resetPasswordLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleForgetPassword(false);
+        });
+        
+        // Prevent form submission (login button is display only)
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html> 
